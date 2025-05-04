@@ -9,20 +9,18 @@ extern "C" {
 #include <stdint.h>
 
 #define PENNE_FREE(p)  do { free(p); p = NULL; } while(0)
+#define PENNE_EMPTY_PIXEL_ARRAY (PennePixelArray){.width = 0, .height = 0, .channels = 0, .pixels = NULL};
 
 typedef enum {
-	PENNE_SUCCESS = 1,
-	PENNE_PIXELARRAY_FAILED_CREATE,
-	PENNE_IMAGE_TYPE_UNSUPPORTED,
-	PENNE_IMAGE_FAILED_LOAD,
-	PENNE_IMAGE_UNKNOWN_CHANNELS,
-} PenneError;
+	PENNE_IMAGE_NONE = 0x00,
+	PENNE_IMAGE_FLIPPEDX = 0x01,
+	PENNE_IMAGE_FLIPPEDY = 0x02,
+} PenneImageFlag;
 
-/*
-	 Converts the given PenneError to a simple string
-	 Note! The returned string is not very descriptive, but merely a string representation of the error code
-*/
-char* penne_errorToString(PenneError e);
+typedef struct {
+	int x, y;
+	size_t width, height;
+} PenneRect;
 
 typedef struct {
 	uint32_t* pixels;
@@ -32,9 +30,9 @@ typedef struct {
 
 /* 
 	 Fills data into the given pixelArray
-	 Returns an error code if width or height are of improper dimensions
+	 Returns empty pixel erray on error, along with putting message into stderr
 */
-PenneError penne_createPixelArray(PennePixelArray* pixelArray, size_t width, size_t height);
+PennePixelArray penne_createPixelArray(size_t width, size_t height);
 /*
 	 Free's the given pixel array's pixels and resets all other values to 0
 */
@@ -83,14 +81,19 @@ void penne_drawPolygon(int* x, size_t xCount, int* y, size_t yCount, uint32_t co
 
 /*
 	 Loads the image at the given path into the given pixel array using stb_image
-	 Returns an error code if one occurs
+	 Returns empty pixel erray on error, along with putting message into stderr
 */
-PenneError penne_loadImageFromPath(PennePixelArray* image, const char* path);
+PennePixelArray penne_loadImageFromPath(const char* path);
 /*
 	 Draws the given image to the given pixel array at the given (x, y) position
 	 Will return early if the given image isn't on screen
 */
-void penne_drawImage(PennePixelArray pixelArray, PennePixelArray image, int x, int y);
+void penne_drawImage(PennePixelArray pixelArray, PennePixelArray image, int x, int y, PenneImageFlag flags);
+/*
+	Draws a subsection of the given image at the given (x, y) position
+	Follows same return logic as penne_drawImage
+*/
+void penne_drawSubImage(PennePixelArray pixelArray, PennePixelArray image, PenneRect src, int x, int y, PenneImageFlag flags);
 
 #ifdef __cplusplus
 }

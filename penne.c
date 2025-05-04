@@ -1,27 +1,21 @@
 #include "penne.h"
 #include <assert.h>
+#include <stdio.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include <external/stb_image.h>
+#include <stb_image.h>
 
-char* penne_errorToString(PenneError e){
-	switch(e){
-		case PENNE_SUCCESS: return "No Error :3";
-		case PENNE_PIXELARRAY_FAILED_CREATE: return "Failed to create Pixel Array due to improper dimensions";
-		case PENNE_IMAGE_TYPE_UNSUPPORTED: return "Given image type unsupported by stb_image";
-		case PENNE_IMAGE_FAILED_LOAD: return "Failed to load image";
-		case PENNE_IMAGE_UNKNOWN_CHANNELS: return "Image had a channel number that was not 1-4";
-		default: break;
+PennePixelArray penne_createPixelArray(size_t width, size_t height){
+	if(width < 1 || height < 1){
+		fprintf(stderr, "Penne ERROR! Failed to create pixel array with dimensions given (%zux%zu)\n", width, height);
+		return PENNE_EMPTY_PIXEL_ARRAY;
+	}
+
+	return (PennePixelArray) {
+		.width = width,
+		.height = height,
+		.channels = 4,
+		.pixels = (uint32_t*)malloc(width*height*sizeof(uint32_t))
 	};
-	return "Unknown Error";
-}
-
-PenneError penne_createPixelArray(PennePixelArray* pixelArray, size_t width, size_t height){
-	if(width < 1 || height < 1){ return PENNE_PIXELARRAY_FAILED_CREATE; }
-	pixelArray->width = width;
-	pixelArray->height = height;
-	pixelArray->channels = 4;
-	pixelArray->pixels = (uint32_t*)malloc(width*height*sizeof(uint32_t));
-	return PENNE_SUCCESS;
 }
 
 void penne_destroyPixelArray(PennePixelArray* pixelArray){
@@ -32,8 +26,8 @@ void penne_destroyPixelArray(PennePixelArray* pixelArray){
 }
 
 void penne_clear(PennePixelArray pixelArray, uint32_t color){
-	for(int y = 0; y < pixelArray.height; y++){
-		for(int x = 0; x < pixelArray.width; x++){
+	for(int y = 0; y < (int)pixelArray.height; y++){
+		for(int x = 0; x < (int)pixelArray.width; x++){
 			pixelArray.pixels[y*pixelArray.width + x] = color;
 		}
 	}
@@ -45,16 +39,16 @@ void penne_drawPixel(PennePixelArray pixelArray, int x, int y, uint32_t color){
 
 void penne_drawRect(PennePixelArray pixelArray, int x, int y, int w, int h, uint32_t color){
 	// offscreen check
-	if(y >= pixelArray.height || y+h < 0 || x+w < 0 || x >= pixelArray.width){ return; }
+	if(y >= (int)pixelArray.height || y+h < 0 || x+w < 0 || x >= (int)pixelArray.width){ return; }
 	if(w < 1 || h < 1){ return; }
 
 	// top and bottom lines
 	for(int dx = x; dx < x+w; dx++){
 		if(dx < 0){ continue; }
-		if(y >= 0 && y < pixelArray.height){
+		if(y >= 0 && y < (int)pixelArray.height){
 			penne_drawPixel(pixelArray, dx, y, color);
 		}
-		if(y+h >= 0 && y+h < pixelArray.height){
+		if(y+h >= 0 && y+h < (int)pixelArray.height){
 			penne_drawPixel(pixelArray, dx, y+h, color);
 		}
 	}
@@ -62,40 +56,40 @@ void penne_drawRect(PennePixelArray pixelArray, int x, int y, int w, int h, uint
 	// right and left lines
 	for(int dy = y; dy < y+h; dy++){
 		if(dy < 0){ continue; }
-		if(x >= 0 && x < pixelArray.width){
+		if(x >= 0 && x < (int)pixelArray.width){
 			penne_drawPixel(pixelArray, x, dy, color);
 		}
-		if((x+w) >= 0 && (x+w) < pixelArray.width){
+		if((x+w) >= 0 && (x+w) < (int)pixelArray.width){
 			penne_drawPixel(pixelArray, x+w, dy, color);
 		}
 	}
 }
 void penne_fillRect(PennePixelArray pixelArray, int x, int y, int w, int h, uint32_t color){
 	// offscreen check
-	if(y >= pixelArray.height || y+h < 0 || x+w < 0 || x >= pixelArray.width){ return; }
+	if(y >= (int)pixelArray.height || y+h < 0 || x+w < 0 || x >= (int)pixelArray.width){ return; }
 	if(w < 1 || h < 1){ return; }
 
 	for(int dy = y; dy < y+h; dy++){
 		if(dy < 0){ continue; }
-		if(dy >= pixelArray.height){ break; }
+		if(dy >= (int)pixelArray.height){ break; }
 		for(int dx = x; dx < x+w; dx++){
 			if(dx < 0){ continue; }
-			if(dx >= pixelArray.width){ break; }
+			if(dx >= (int)pixelArray.width){ break; }
 			penne_drawPixel(pixelArray, dx, dy, color);
 		}
 	}
 }
 
 void penne_drawCircle(PennePixelArray pixelArray, int cx, int cy, size_t radius, uint32_t color){
-	if(cx >= pixelArray.width || cy >= pixelArray.height || cx+radius < 0 || cy+radius < 0){ return; }
+	if(cx >= (int)pixelArray.width || cy >= (int)pixelArray.height || cx+(int)radius < 0 || cy+(int)radius < 0){ return; }
 
 	int dist = radius+1;
-	for(int dy = cy-radius-1; dy <= cy+radius+1; dy++){
+	for(int dy = cy-radius-1; dy <= cy+(int)radius+1; dy++){
 		if(dy < 0){ continue; }
-		if(dy >= pixelArray.height){ break; }
-		for(int dx = cx-radius-1; dx <= cx+radius+1; dx++){
+		if(dy >= (int)pixelArray.height){ break; }
+		for(int dx = cx-radius-1; dx <= cx+(int)radius+1; dx++){
 			if(dx < 0){ continue; }
-			if(dx >= pixelArray.width){ break; }
+			if(dx >= (int)pixelArray.width){ break; }
 
 			dist = (cx-dx)*(cx-dx) + (cy-dy)*(cy-dy);
 			// slight threshold for the outline to be more full
@@ -106,18 +100,19 @@ void penne_drawCircle(PennePixelArray pixelArray, int cx, int cy, size_t radius,
 	}
 }
 void penne_fillCircle(PennePixelArray pixelArray, int cx, int cy, size_t radius, uint32_t color){
-	if(cx >= pixelArray.width || cy >= pixelArray.height || cx+radius < 0 || cy+radius < 0){ return; }
+	if(cx >= (int)pixelArray.width || cy >= (int)pixelArray.height || cx+(int)radius < 0 || cy+(int)radius < 0){ return; }
 
+	int r2 = radius*radius;
 	int dist = radius+1;
-	for(int dy = cy-radius-1; dy <= cy+radius+1; dy++){
+	for(int dy = cy-radius-1; dy <= cy+(int)radius+1; dy++){
 		if(dy < 0){ continue; }
-		if(dy >= pixelArray.height){ break; }
-		for(int dx = cx-radius-1; dx <= cx+radius+1; dx++){
+		if(dy >= (int)pixelArray.height){ break; }
+		for(int dx = cx-radius-1; dx <= cx+(int)radius+1; dx++){
 			if(dx < 0){ continue; }
-			if(dx >= pixelArray.width){ break; }
+			if(dx >= (int)pixelArray.width){ break; }
 
 			dist = (cx-dx)*(cx-dx) + (cy-dy)*(cy-dy);
-			if(dist <= radius*radius){
+			if(dist <= r2){
 				penne_drawPixel(pixelArray, dx, dy, color);
 			}
 		}
@@ -125,25 +120,34 @@ void penne_fillCircle(PennePixelArray pixelArray, int cx, int cy, size_t radius,
 }
 
 void penne_drawPolygon(int* x, size_t xCount, int* y, size_t yCount, uint32_t color){
+	(void)x;
+	(void)xCount;
+	(void)y;
+	(void)yCount;
+	(void)color;
 	assert(0 && "penne_drawPolygon is currently unimplmented");
 }
 
-PenneError penne_loadImageFromPath(PennePixelArray* image, const char* path){
+PennePixelArray penne_loadImageFromPath(const char* path){
 	int x, y, n;
 	int ok = stbi_info(path, &x, &y, &n);
 	if(ok == 0){
-		return PENNE_IMAGE_TYPE_UNSUPPORTED;
+		fprintf(stderr, "Penne ERROR! Image at %s is not of a supported type\n", path);
+		return PENNE_EMPTY_PIXEL_ARRAY;
 	}
 
 	unsigned char* data = stbi_load(path, &x, &y, &n, 0);
 	if(data == NULL){
-		return PENNE_IMAGE_FAILED_LOAD;
+		fprintf(stderr, "Penne ERROR! Unable to read image at %s\n", path);
+		return PENNE_EMPTY_PIXEL_ARRAY;
 	}
 
-	image->width = x;
-	image->height = y;
-	image->channels = n;
-	image->pixels = (uint32_t*)malloc(x*y*sizeof(unsigned char));
+	PennePixelArray image;
+
+	image.width = x;
+	image.height = y;
+	image.channels = n;
+	image.pixels = (uint32_t*)malloc(x*y*sizeof(unsigned char));
 
 	for(int i = 0; i < x*y*n; i += n){
 		uint32_t pixel = 0x00000000;
@@ -154,6 +158,7 @@ PenneError penne_loadImageFromPath(PennePixelArray* image, const char* path){
 				pixel |= (data[i] << 16);
 				pixel |= (data[i] << 8);
 				pixel |= 0xff;
+				break;
 			}
 			case 2:
 			{
@@ -161,6 +166,7 @@ PenneError penne_loadImageFromPath(PennePixelArray* image, const char* path){
 				pixel |= (data[i] << 16);
 				pixel |= (data[i] << 8);
 				pixel |= (data[i+1]);
+				break;
 			}
 			case 3:
 			{
@@ -168,6 +174,7 @@ PenneError penne_loadImageFromPath(PennePixelArray* image, const char* path){
 				pixel |= (data[i+1] << 16);
 				pixel |= (data[i+2] << 8);
 				pixel |= 0xff;
+				break;
 			}
 			case 4:
 			{
@@ -175,31 +182,82 @@ PenneError penne_loadImageFromPath(PennePixelArray* image, const char* path){
 				pixel |= (data[i+1] << 16);
 				pixel |= (data[i+2] << 8);
 				pixel |= (data[i+3]);
+				break;
 			}
 			default:
 			{
-				penne_destroyPixelArray(image);
+				penne_destroyPixelArray(&image);
 				stbi_image_free(data);
-				return PENNE_IMAGE_UNKNOWN_CHANNELS;
+				fprintf(stderr, "Penne ERROR! Image has %d channels, which isn't supported\n", n);
+				return PENNE_EMPTY_PIXEL_ARRAY;
 			}
 		};
-		image->pixels[i/n] = pixel;
+		image.pixels[i/n] = pixel;
 	}
 
 	stbi_image_free(data);
-	return PENNE_SUCCESS;
+	return image;
 }
-void penne_drawImage(PennePixelArray pixelArray, PennePixelArray image, int x, int y){
-	if(x+image.width < 0 || y+image.height < 0 || x >= pixelArray.width || y >= pixelArray.height){ return; }
+void penne_drawImage(PennePixelArray pixelArray, PennePixelArray image, int x, int y, PenneImageFlag flags){
+	if(x+(int)image.width < 0 || y+(int)image.height < 0 || x >= (int)pixelArray.width || y >= (int)pixelArray.height){ return; }
 
-	for(int dy = y; dy < y+image.height; dy++){
+	if(flags == PENNE_IMAGE_NONE){
+		for(int dy = y; dy < y+(int)image.height; dy++){
+			if(dy < 0){ continue; }
+			if(dy >= (int)pixelArray.height){ break; }
+			for(int dx = x; dx < x+(int)image.width; dx++){
+				if(dx < 0){ continue; }
+				if(dx >= (int)pixelArray.width){ break; }
+
+				penne_drawPixel(pixelArray, dx, dy, image.pixels[(dy-y)*image.width + (dx-x)]);
+			}
+		}
+		return;
+	}
+	int xStart = ((flags << PENNE_IMAGE_FLIPPEDX) == 1 ? x+(int)image.width-1 : x);
+	int xIncr = ((flags << PENNE_IMAGE_FLIPPEDX) == 1 ? -1 : 1);
+	int yStart = ((flags << PENNE_IMAGE_FLIPPEDY) == 1 ? y+(int)image.height-1 : y);
+	int yIncr = ((flags << PENNE_IMAGE_FLIPPEDY) == 1 ? -1 : 1);
+	for(int dy = yStart; dy >= y && dy < y+(int)image.height; dy += yIncr){
 		if(dy < 0){ continue; }
-		if(dy >= pixelArray.height){ break; }
-		for(int dx = x; dx < x+image.width; dx++){
+		if(dy >= (int)pixelArray.height){ break; }
+		for(int dx = xStart; dx >= x && dx < x+(int)image.height; dx += xIncr){
 			if(dx < 0){ continue; }
-			if(dx >= pixelArray.width){ break; }
+			if(dx >= (int)pixelArray.width){ break; }
 
 			penne_drawPixel(pixelArray, dx, dy, image.pixels[(dy-y)*image.width + (dx-x)]);
+		}
+	}
+}
+
+void penne_drawSubImage(PennePixelArray pixelArray, PennePixelArray image, PenneRect src, int x, int y, PenneImageFlag flags){
+	if(x+(int)src.width < 0 || y+(int)src.height < 0 || x >= (int)pixelArray.width || y >= (int)pixelArray.height){ return; }
+
+	if(flags == PENNE_IMAGE_NONE){
+		for(int dy = y; y < y+(int)src.height; y++){
+			if(dy < 0){ continue; }
+			if(dy >= (int)pixelArray.height){ break; }
+			for(int dx = x; dx < x+(int)src.width; x++){
+				if(dx < 0){ continue; }
+				if(dx >= (int)pixelArray.width){ break; }
+
+				penne_drawPixel(pixelArray, dx, dy, image.pixels[(dy-y+(int)src.y)*image.width + (dx-x+(int)src.x)]);
+			}
+		}
+		return;
+	}
+	int xStart = ((flags << PENNE_IMAGE_FLIPPEDX) == 1 ? x+(int)src.width-1 : x);
+	int xIncr = ((flags << PENNE_IMAGE_FLIPPEDX) == 1 ? -1 : 1);
+	int yStart = ((flags << PENNE_IMAGE_FLIPPEDY) == 1 ? y+(int)src.height-1 : y);
+	int yIncr = ((flags << PENNE_IMAGE_FLIPPEDY) == 1 ? -1 : 1);
+	for(int dy = yStart; dy >= y && dy < y+(int)src.height; dy += yIncr){
+		if(dy < 0){ continue; }
+		if(dy >= (int)pixelArray.height){ break; }
+		for(int dx = xStart; dx >= x && dx < x+(int)src.height; dx += xIncr){
+			if(dx < 0){ continue; }
+			if(dx >= (int)pixelArray.width){ break; }
+
+			penne_drawPixel(pixelArray, dx, dy, image.pixels[(dy-y+(int)src.y)*image.width + (dx-x+(int)src.x)]);
 		}
 	}
 }
