@@ -6,16 +6,21 @@
 
 PennePixelArray penne_createPixelArray(size_t width, size_t height){
 	if(width < 1 || height < 1){
+		perror("Error: ");
 		fprintf(stderr, "Penne ERROR! Failed to create pixel array with dimensions given (%zux%zu)\n", width, height);
 		return PENNE_EMPTY_PIXEL_ARRAY;
 	}
 
-	return (PennePixelArray) {
-		.width = width,
-		.height = height,
-		.channels = 4,
-		.pixels = (uint32_t*)malloc(width*height*sizeof(uint32_t))
-	};
+	PennePixelArray res;
+	res.width = width;
+	res.height = height;
+	res.channels = 4;
+	res.pixels = malloc(width*height*sizeof(uint32_t));
+	if(res.pixels == NULL){
+		perror("Error: ");
+		fprintf(stderr, "Penne ERROR! Failed to allocate pixel array with dimensions %zux%zu\n", width, height);
+	}
+	return res;
 }
 
 void penne_destroyPixelArray(PennePixelArray* pixelArray){
@@ -132,12 +137,15 @@ PennePixelArray penne_loadImageFromPath(const char* path){
 	int x, y, n;
 	int ok = stbi_info(path, &x, &y, &n);
 	if(ok == 0){
+		perror("Error: ");
 		fprintf(stderr, "Penne ERROR! Image at %s is not of a supported type\n", path);
 		return PENNE_EMPTY_PIXEL_ARRAY;
 	}
 
+	stbi_set_flip_vertically_on_load(true);
 	unsigned char* data = stbi_load(path, &x, &y, &n, 0);
 	if(data == NULL){
+		perror("Error: ");
 		fprintf(stderr, "Penne ERROR! Unable to read image at %s\n", path);
 		return PENNE_EMPTY_PIXEL_ARRAY;
 	}
@@ -147,8 +155,9 @@ PennePixelArray penne_loadImageFromPath(const char* path){
 	image.width = x;
 	image.height = y;
 	image.channels = n;
-	image.pixels = (uint32_t*)malloc(x*y*sizeof(unsigned char));
+	image.pixels = malloc(x*y*sizeof(uint32_t));
 
+	printf("Reading image from %s\n\tsize: %dx%d\n\tchannels: %d\n", path, x, y, n);
 	for(int i = 0; i < x*y*n; i += n){
 		uint32_t pixel = 0x00000000;
 		switch(n){
@@ -234,10 +243,10 @@ void penne_drawSubImage(PennePixelArray pixelArray, PennePixelArray image, Penne
 	if(x+(int)src.width < 0 || y+(int)src.height < 0 || x >= (int)pixelArray.width || y >= (int)pixelArray.height){ return; }
 
 	if(flags == PENNE_IMAGE_NONE){
-		for(int dy = y; y < y+(int)src.height; y++){
+		for(int dy = y; y < y+(int)src.height; dy++){
 			if(dy < 0){ continue; }
 			if(dy >= (int)pixelArray.height){ break; }
-			for(int dx = x; dx < x+(int)src.width; x++){
+			for(int dx = x; dx < x+(int)src.width; dx++){
 				if(dx < 0){ continue; }
 				if(dx >= (int)pixelArray.width){ break; }
 
