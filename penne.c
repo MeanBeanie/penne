@@ -39,7 +39,20 @@ void penne_clear(PennePixelArray pixelArray, uint32_t color){
 }
 
 void penne_drawPixel(PennePixelArray pixelArray, int x, int y, uint32_t color){
-	pixelArray.pixels[y*pixelArray.width + x] = color;
+	uint32_t pixel = pixelArray.pixels[y*pixelArray.width + x];
+	float opacity = color & 0xFF;
+	opacity /= 255;
+	uint8_t new[3] = {
+		((pixel >> 24) & 0xFF)*(1-opacity) + ((color >> 24) & 0xFF)*(opacity),
+		((pixel >> 16) & 0xFF)*(1-opacity) + ((color >> 16) & 0xFF)*(opacity),
+		((pixel >>  8) & 0xFF)*(1-opacity) + ((color >> 8) & 0xFF)*(opacity),
+	};
+	uint32_t finalColor = 0x00000000;
+	finalColor |= (new[0] << 24);
+	finalColor |= (new[1] << 16);
+	finalColor |= (new[2] << 8);
+	finalColor |= (color & 0xFF);
+	pixelArray.pixels[y*pixelArray.width + x] = finalColor;
 }
 
 void penne_drawRect(PennePixelArray pixelArray, int x, int y, int w, int h, uint32_t color){
